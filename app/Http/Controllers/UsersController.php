@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
 class UsersController extends Controller
@@ -14,31 +15,39 @@ class UsersController extends Controller
      */
     public function index()
     {
-       $users = User::join('transactions', 'transactions.user_id' ,'=' ,'users.id');
-        if(request()->has('search')){
-            $users->where('name', 'like', '%' . request('search') . '%');
+        try {
+            $users = User::join('transactions', 'transactions.user_id' ,'=' ,'users.id');
+            if(request()->has('search')){
+                $users->where('name', 'like', '%' . request('search') . '%');
+            }
+    
+            if(request()->has('status_code')){
+                $users->join('status_codes', 'status_codes.id' , '=' , 'transactions.status_code_id')
+                    ->where('status_code_name', request('status_code'));
+            }
+    
+            if(request()->has('date_from')){
+                $users->where('transactions.created_at', '>=' , request('date_to'));
+            }
+    
+            if(request()->has('date_to')){
+                $users->where('transactions.created_at', '<=' , request('date_to'));
+            }
+    
+            if(request()->has('amount_from')){
+                $users->where('transactions.amount', '>=' , request('amount_from'));
+            }
+            if(request()->has('amount_to')){
+                $users->where('transactions.amount', '<=' , request('amount_to'));
+            }
+            if(request()->has('currency')){
+                $users->where('transactions.currency', '<=' , request('currency'));
+            }
+    
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => "the request data not found"], 400);
         }
-
-        if(request()->has('status_code')){
-            $users->join('status_codes', 'status_codes.id' , '=' , 'transactions.status_code_id')
-                ->where('status_code_name', request('status_code'));
-        }
-
-        if(request()->has('date_from')){
-            $users->where('transactions.created_at', '>=' , request('date_to'));
-        }
-
-        if(request()->has('date_to')){
-            $users->where('transactions.created_at', '<=' , request('date_to'));
-        }
-
-        if(request()->has('amount_from')){
-            $users->where('transactions.amount', '>=' , request('amount_from'));
-        }
-        if(request()->has('amount_to')){
-            $users->where('transactions.amount', '<=' , request('amount_to'));
-        }
-
+        
         $users = $users->paginate();
         return response()->json($users, 200);
     }
